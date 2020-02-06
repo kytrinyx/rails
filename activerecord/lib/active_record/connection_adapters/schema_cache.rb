@@ -132,7 +132,13 @@ module ActiveRecord
       def dump_to(filename)
         clear!
         connection.data_sources.each { |table| add(table) }
-        open(filename, "wb") { |f| f.write(YAML.dump(self)) }
+        open(filename, "wb") { |f|
+          if filename.end_with?(".dump")
+            f.write(Marshal.dump(self))
+          else
+            f.write(YAML.dump(self))
+          end
+        }
       end
 
       def load_from(filename)
@@ -141,7 +147,8 @@ module ActiveRecord
         current_version = connection.migration_context.current_version
         return if current_version.nil?
 
-        cache = YAML.load(File.read(filename))
+        file = File.read(filename)
+        cache = filename.end_with?(".dump") ? Marshal.load(file) : YAML.load(file)
         if cache.version != current_version
           warn "Ignoring #{filename} because it has expired. The current schema version is #{current_version}, but the one in the cache is #{cache.version}."
           return
