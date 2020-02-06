@@ -135,6 +135,23 @@ module ActiveRecord
         open(filename, "wb") { |f| f.write(YAML.dump(self)) }
       end
 
+      def load_from(filename)
+        return unless File.file?(filename)
+
+        current_version = connection.migration_context.current_version
+        return if current_version.nil?
+
+        cache = YAML.load(File.read(filename))
+        if cache.version != current_version
+          warn "Ignoring #{filename} because it has expired. The current schema version is #{current_version}, but the one in the cache is #{cache.version}."
+          return
+        end
+
+        [:@columns, :@columns_hash, :@primary_keys, :@data_sources, :@indexes, :@version, :@database_version].each do |ivar|
+          instance_variable_set(ivar, cache.instance_variable_get(ivar))
+        end
+      end
+
       def marshal_dump
         # if we get current version during initialization, it happens stack over flow.
         @version = connection.migration_context.current_version

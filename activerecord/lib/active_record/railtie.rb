@@ -139,18 +139,7 @@ To keep using the current cache store, you can turn off cache versioning entirel
               schema_cache_path: db_config.schema_cache_path,
             )
 
-            if File.file?(filename)
-              current_version = ActiveRecord::Migrator.current_version
-
-              next if current_version.nil?
-
-              cache = YAML.load(File.read(filename))
-              if cache.version == current_version
-                connection_pool.schema_cache = cache.dup
-              else
-                warn "Ignoring db/schema_cache.yml because it has expired. The current schema version is #{current_version}, but the one in the cache is #{cache.version}."
-              end
-            end
+            connection_pool.get_schema_cache(connection_pool.connection).load_from(filename)
           end
         end
       end
